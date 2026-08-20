@@ -1,12 +1,12 @@
 import type { PostgrestError } from '@supabase/supabase-js';
 
-import { err, ok, type Result } from '@/lib/result';
 import { supabase } from '@/lib/supabase';
 import type { Category } from '@/types/todo';
+import { err, ok, type Result } from '@/utils/result';
 
 function toMessage(error: PostgrestError): string {
   switch (error.code) {
-    case '23505': // unique_violation — the (user_id, name) constraint
+    case '23505':
       return 'You already have a category with that name.';
     case '42501':
       return 'You do not have permission to do that.';
@@ -40,9 +40,8 @@ export async function createCategory(input: {
   return ok(data);
 }
 
+/** Todos survive: the composite FK is ON DELETE SET NULL (category_id). */
 export async function deleteCategory(id: string): Promise<Result> {
-  // Todos referencing this category are not deleted: the composite foreign
-  // key is ON DELETE SET NULL (category_id), so they become uncategorised.
   const { error } = await supabase.from('categories').delete().eq('id', id);
 
   if (error) return err(toMessage(error));

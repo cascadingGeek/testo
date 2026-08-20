@@ -1,15 +1,15 @@
 import { Redirect, Tabs } from 'expo-router';
 
 import { FullScreenLoader } from '@/components/full-screen-loader';
-import { useAuth } from '@/features/auth/auth-context';
+import { useAuthStore } from '@/store/auth-store';
 
 export default function AppLayout() {
-  const { session, isLoading } = useAuth();
+  const session = useAuthStore((state) => state.session);
+  const isLoading = useAuthStore((state) => state.isLoading);
 
-  // Do NOT redirect while loading, or every cold start flashes the login
-  // screen for a moment before the persisted session is found.
+  // A null session means "unknown" until loading finishes; redirecting here
+  // would flash the login screen on every cold start.
   if (isLoading) return <FullScreenLoader />;
-
   if (!session) return <Redirect href="/login" />;
 
   return (

@@ -1,11 +1,6 @@
 import type { ZodError } from 'zod';
 
-/**
- * Turns a ZodError into { fieldName: firstMessage }.
- *
- * Only the first issue per field is kept: showing a user three complaints
- * about one input at once is noise, not help.
- */
+/** First message per field — three complaints about one input is noise. */
 export function toFieldErrors<TField extends string>(
   error: ZodError
 ): Partial<Record<TField, string>> {

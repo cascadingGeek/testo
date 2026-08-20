@@ -1,20 +1,13 @@
 import { Pressable, Text, View } from 'react-native';
 
-import { addDaysString, formatDueDate, todayString } from '@/lib/dates';
+import { addDaysString, formatDueDate, todayString } from '@/utils/dates';
 
 type DueDatePickerProps = {
   value: string | null;
   onChange: (dueDate: string | null) => void;
 };
 
-/**
- * Quick picks rather than a calendar.
- *
- * `due_date` is a plain date, and the overwhelming majority of todos are due
- * today, tomorrow, or vaguely this week. Three taps of a native calendar to
- * express "tomorrow" is worse UX than one button, and this adds no
- * dependency. A calendar can be added later without changing the data model.
- */
+/** Quick picks rather than a calendar: most todos are due within the week. */
 export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
   const options = [
     { label: 'Today', date: todayString() },

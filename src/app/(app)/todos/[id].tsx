@@ -1,16 +1,24 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 
 import { FormField } from '@/components/form-field';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { CategoryPicker } from '@/features/todos/components/category-picker';
 import { DueDatePicker } from '@/features/todos/components/due-date-picker';
 import { PrioritySelector } from '@/features/todos/components/priority-selector';
-import { todoEditSchema } from '@/features/todos/todo-schemas';
-import { useTodo } from '@/features/todos/use-todo';
-import { toFieldErrors } from '@/lib/form-errors';
+import { useTodo } from '@/hooks/use-todo';
+import { todoEditSchema } from '@/schemas/todo';
 import type { TodoPriority } from '@/types/todo';
+import { toFieldErrors } from '@/utils/form-errors';
 
 type Field = 'title' | 'description' | 'priority' | 'due_date' | 'category_id';
 
@@ -27,9 +35,8 @@ export default function TodoDetailScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Seed the form once the row arrives. `todo.id` rather than `todo` as the
-  // dependency: re-seeding on every save would discard edits made while the
-  // request was in flight.
+  // Keyed on id, not the todo object: re-seeding after a save would discard
+  // edits made while the request was in flight.
   useEffect(() => {
     if (!todo) return;
     setTitle(todo.title);
@@ -67,8 +74,6 @@ export default function TodoDetailScreen() {
   }
 
   function handleDelete() {
-    // Deletion is irreversible and there is no undo, so it gets a confirm.
-    // Alert.alert renders the platform's own native dialog on each OS.
     Alert.alert('Delete todo?', 'This cannot be undone.', [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -99,8 +104,8 @@ export default function TodoDetailScreen() {
     );
   }
 
-  // Covers both a deleted todo and one belonging to another user: RLS makes
-  // those indistinguishable, which is exactly the intent.
+  // Covers a deleted todo and another user's todo alike — RLS makes them
+  // indistinguishable, which is the intent.
   if (error || !todo) {
     return (
       <View className="flex-1 items-center justify-center gap-4 bg-background p-6">
@@ -159,9 +164,7 @@ export default function TodoDetailScreen() {
           </Button>
 
           <Button variant="outline" onPress={handleToggle}>
-            <ButtonText>
-              {todo.completed ? 'Mark as not done' : 'Mark as done'}
-            </ButtonText>
+            <ButtonText>{todo.completed ? 'Mark as not done' : 'Mark as done'}</ButtonText>
           </Button>
 
           <Button variant="destructive" onPress={handleDelete}>

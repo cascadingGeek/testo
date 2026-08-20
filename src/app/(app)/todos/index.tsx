@@ -1,31 +1,39 @@
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 
+import type { TodoWithCategory } from '@/api/todos';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Input, InputField } from '@/components/ui/input';
 import { FilterBar } from '@/features/todos/components/filter-bar';
 import { TodoItem } from '@/features/todos/components/todo-item';
-import { countByFilter, selectTodos, sortTodos } from '@/features/todos/todo-filters';
-import { SORT_LABELS, TODO_SORTS, useTodoViewStore } from '@/features/todos/todo-view-store';
-import type { TodoWithCategory } from '@/features/todos/todos-api';
-import { useTodos } from '@/features/todos/use-todos';
-import { todayString } from '@/lib/dates';
+import { useTodos } from '@/hooks/use-todos';
+import { SORT_LABELS, TODO_SORTS, useTodoViewStore } from '@/store/todo-view-store';
+import { todayString } from '@/utils/dates';
+import { countByFilter, selectTodos, sortTodos } from '@/utils/todo-filters';
 
 export default function TodosScreen() {
   const { todos, isLoading, isRefreshing, error, refresh, addTodo, toggleTodo, removeTodo } =
     useTodos();
 
-  // Selected field-by-field rather than as one object: a component that
-  // subscribes to the whole store re-renders when any part of it changes.
+  // Selected field by field: subscribing to the whole store re-renders on
+  // every unrelated change.
   const filter = useTodoViewStore((state) => state.filter);
   const query = useTodoViewStore((state) => state.query);
   const sort = useTodoViewStore((state) => state.sort);
   const setFilter = useTodoViewStore((state) => state.setFilter);
   const setQuery = useTodoViewStore((state) => state.setQuery);
   const setSort = useTodoViewStore((state) => state.setSort);
+
   const [title, setTitle] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const today = todayString();
+  const visibleTodos = useMemo(
+    () => sortTodos(selectTodos(todos, filter, query, today), sort),
+    [todos, filter, query, sort, today]
+  );
+  const counts = useMemo(() => countByFilter(todos, today), [todos, today]);
 
   async function handleAdd() {
     const trimmed = title.trim();
@@ -44,21 +52,6 @@ export default function TodosScreen() {
     setTitle('');
   }
 
-  // Computed once per render pass rather than per todo, so every row in this
-  // pass is measured against the same day boundary.
-  const today = todayString();
-
-  // useMemo because this runs on every keystroke in the search box. With a
-  // handful of todos it is cheap either way; the point is that the work is
-  // tied to the data changing, not to unrelated re-renders.
-  const visibleTodos = useMemo(
-    () => sortTodos(selectTodos(todos, filter, query, today), sort),
-    [todos, filter, query, sort, today]
-  );
-
-  const counts = useMemo(() => countByFilter(todos, today), [todos, today]);
-
-  // Stable identities so memoised rows are not invalidated on every render.
   const handleToggle = useCallback(
     async (todo: TodoWithCategory) => {
       const result = await toggleTodo(todo);
@@ -83,8 +76,7 @@ export default function TodosScreen() {
     );
   }
 
-  // A failed first load has nothing to show, so the error takes the screen.
-  // Once todos are on screen, a failed action must not blank them out.
+  // A failed action must not blank out todos that are already on screen.
   if (error && todos.length === 0) {
     return (
       <View className="flex-1 items-center justify-center gap-4 bg-background p-6">
@@ -122,8 +114,6 @@ export default function TodosScreen() {
             placeholder="Search todos"
             autoCapitalize="none"
             autoCorrect={false}
-            // A search box that cannot be emptied in one tap is a nuisance;
-            // this is the iOS-native clear affordance.
             clearButtonMode="while-editing"
           />
         </Input>
@@ -150,8 +140,6 @@ export default function TodosScreen() {
 
       <FlatList
         data={visibleTodos}
-        // Tells FlatList which rows are which, so it can recycle views
-        // correctly instead of rebuilding the list on every change.
         keyExtractor={(todo) => todo.id}
         renderItem={({ item }) => (
           <TodoItem todo={item} onToggle={handleToggle} onDelete={handleDelete} />
@@ -169,8 +157,6 @@ export default function TodosScreen() {
             </Text>
           </View>
         }
-        // Pull-to-refresh is the expected way to reload a list on mobile.
-        // There is no equivalent gesture on the web, so this is native-first.
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} />}
       />
     </View>

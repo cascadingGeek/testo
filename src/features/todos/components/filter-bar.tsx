@@ -1,6 +1,6 @@
 import { Pressable, ScrollView, Text } from 'react-native';
 
-import { FILTER_LABELS, TODO_FILTERS, type TodoFilter } from '@/features/todos/todo-filters';
+import { FILTER_LABELS, TODO_FILTERS, type TodoFilter } from '@/utils/todo-filters';
 
 type FilterBarProps = {
   value: TodoFilter;
@@ -10,14 +10,7 @@ type FilterBarProps = {
 
 export function FilterBar({ value, counts, onChange }: FilterBarProps) {
   return (
-    <ScrollView
-      horizontal
-      // The bar is wider than the screen by design. Hiding the indicator and
-      // padding the content keeps the last chip reachable without a visible
-      // scrollbar, which is the standard mobile chip-row pattern.
-      showsHorizontalScrollIndicator={false}
-      contentContainerClassName="gap-2 px-4"
-    >
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2 px-4">
       {TODO_FILTERS.map((filter) => {
         const isSelected = filter === value;
 

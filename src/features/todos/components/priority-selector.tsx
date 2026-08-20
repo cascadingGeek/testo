@@ -1,6 +1,6 @@
 import { Pressable, Text, View } from 'react-native';
 
-import { TODO_PRIORITIES } from '@/features/todos/todo-schemas';
+import { TODO_PRIORITIES } from '@/schemas/todo';
 import type { TodoPriority } from '@/types/todo';
 
 type PrioritySelectorProps = {
@@ -8,11 +8,6 @@ type PrioritySelectorProps = {
   onChange: (priority: TodoPriority) => void;
 };
 
-/**
- * A segmented control rather than a dropdown. With three short options a
- * picker costs an extra tap and hides the choices behind a modal; on mobile,
- * showing all of them is both faster and more discoverable.
- */
 export function PrioritySelector({ value, onChange }: PrioritySelectorProps) {
   return (
     <View className="gap-1.5">

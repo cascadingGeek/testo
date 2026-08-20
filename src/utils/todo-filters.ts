@@ -1,5 +1,5 @@
-import type { TodoSort } from '@/features/todos/todo-view-store';
-import { isOverdue } from '@/lib/dates';
+import type { TodoSort } from '@/store/todo-view-store';
+import { isOverdue } from '@/utils/dates';
 import type { Todo } from '@/types/todo';
 
 export const TODO_FILTERS = ['all', 'today', 'upcoming', 'overdue', 'completed'] as const;
@@ -14,14 +14,7 @@ export const FILTER_LABELS: Record<TodoFilter, string> = {
   completed: 'Done',
 };
 
-/**
- * Pure predicates, with `today` passed in rather than read from the clock.
- *
- * Two reasons: they can be unit tested without freezing time, and every todo
- * in one pass is compared against the same day boundary. Reading the clock
- * inside a loop that runs at 23:59:59.9 can classify two todos differently
- * in the same render.
- */
+/** `today` is passed in so every todo in a pass shares one day boundary. */
 function matchesFilter(todo: Todo, filter: TodoFilter, today: string): boolean {
   switch (filter) {
     case 'all':
@@ -56,10 +49,7 @@ export function selectTodos<TTodo extends Todo>(
   return todos.filter((todo) => matchesFilter(todo, filter, today) && matchesQuery(todo, query));
 }
 
-/**
- * Counts ignore the search query on purpose: the chips describe the whole
- * list, so they must not shift around while the user is typing.
- */
+/** Counts ignore the query so the chips don't shift while typing. */
 export function countByFilter(todos: Todo[], today: string): Record<TodoFilter, number> {
   const counts = {} as Record<TodoFilter, number>;
 
@@ -70,17 +60,15 @@ export function countByFilter(todos: Todo[], today: string): Record<TodoFilter, 
   return counts;
 }
 
-/** High first. Postgres enums have an order, but JSON gives us plain strings. */
 const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
 
-/** Todos with no due date sort last rather than first. */
+/** No due date sorts last. */
 function dueRank(dueDate: string | null): string {
   return dueDate ?? '9999-12-31';
 }
 
 export function sortTodos<TTodo extends Todo>(todos: TTodo[], sort: TodoSort): TTodo[] {
-  // toSorted would be neater, but Hermes does not ship it yet. Copy first:
-  // sorting the array in place would mutate the TanStack Query cache.
+  // Copy first: this array is the query cache.
   const copy = [...todos];
 
   switch (sort) {
@@ -91,7 +79,6 @@ export function sortTodos<TTodo extends Todo>(todos: TTodo[], sort: TodoSort): T
     case 'title':
       return copy.sort((a, b) => a.title.localeCompare(b.title));
     case 'smart':
-      // Unfinished work first, then by urgency, then oldest-created first.
       return copy.sort(
         (a, b) =>
           Number(a.completed) - Number(b.completed) ||

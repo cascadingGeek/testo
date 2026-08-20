@@ -1,9 +1,4 @@
-/**
- * Query keys in one place rather than string literals scattered across hooks.
- *
- * The hierarchy matters: invalidating `todoKeys.all` invalidates every list
- * AND every detail below it, because TanStack matches keys by prefix.
- */
+/** Keys match by prefix, so invalidating `all` covers every list and detail. */
 export const todoKeys = {
   all: ['todos'] as const,
   list: () => [...todoKeys.all, 'list'] as const,

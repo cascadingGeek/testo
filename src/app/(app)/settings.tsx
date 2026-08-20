@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
+import { signOut } from '@/api/auth';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
-import { signOut } from '@/features/auth/auth-api';
-import { useAuth } from '@/features/auth/auth-context';
-import { useCategories } from '@/features/categories/use-categories';
+import { useCategories } from '@/hooks/use-categories';
+import { useAuthStore } from '@/store/auth-store';
 
 export default function SettingsScreen() {
-  const { session } = useAuth();
+  const email = useAuthStore((state) => state.session?.user.email);
   const { categories, isLoading, removeCategory } = useCategories();
 
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -21,18 +21,13 @@ export default function SettingsScreen() {
     if (!result.ok) {
       setIsSigningOut(false);
       setError(result.message);
-      return;
     }
-
-    // On success we do NOT reset isSigningOut: the session clears, the (app)
-    // gate redirects, and this screen unmounts.
+    // On success the gate redirects and this screen unmounts.
   }
 
   function handleDeleteCategory(id: string, name: string) {
     Alert.alert(
       `Delete "${name}"?`,
-      // Say what happens to the todos. "This cannot be undone" alone would
-      // leave people assuming their todos go with it.
       'Todos in this category will be kept and become uncategorised.',
       [
         { text: 'Cancel', style: 'cancel' },
@@ -52,7 +47,7 @@ export default function SettingsScreen() {
     <ScrollView className="flex-1 bg-background" contentContainerClassName="gap-8 p-6 pt-16">
       <View className="gap-1">
         <Text className="text-3xl font-bold text-foreground">Settings</Text>
-        <Text className="text-base text-muted-foreground">{session?.user.email}</Text>
+        <Text className="text-base text-muted-foreground">{email}</Text>
       </View>
 
       {error ? (
@@ -72,10 +67,7 @@ export default function SettingsScreen() {
           </Text>
         ) : (
           categories.map((category) => (
-            <View
-              key={category.id}
-              className="flex-row items-center gap-3 rounded-lg bg-card p-4"
-            >
+            <View key={category.id} className="flex-row items-center gap-3 rounded-lg bg-card p-4">
               <View
                 className="h-3 w-3 rounded-full"
                 style={{ backgroundColor: category.color }}

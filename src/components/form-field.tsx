@@ -5,7 +5,6 @@ import { Input, InputField } from '@/components/ui/input';
 
 type FormFieldProps = ComponentProps<typeof InputField> & {
   label: string;
-  /** Validation message. When set, the field renders in its invalid state. */
   error?: string;
 };
 

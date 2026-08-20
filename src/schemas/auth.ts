@@ -4,9 +4,7 @@ const email = z.email('Enter a valid email address.');
 
 export const loginSchema = z.object({
   email,
-  // Deliberately NOT the 8-character rule. On login we only check that
-  // something was typed — enforcing today's policy here would lock out
-  // anyone who registered under an older, shorter one.
+  // Not the 8-char rule: that would lock out anyone who registered earlier.
   password: z.string().min(1, 'Enter your password.'),
 });
 

@@ -2,12 +2,12 @@ import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { registerWithEmail } from '@/api/auth';
 import { AuthScreenLayout } from '@/components/auth-screen-layout';
 import { FormField } from '@/components/form-field';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
-import { registerWithEmail } from '@/features/auth/auth-api';
-import { registerSchema } from '@/features/auth/auth-schemas';
-import { toFieldErrors } from '@/lib/form-errors';
+import { registerSchema } from '@/schemas/auth';
+import { toFieldErrors } from '@/utils/form-errors';
 
 type Field = 'email' | 'password' | 'confirmPassword';
 
@@ -23,11 +23,7 @@ export default function RegisterScreen() {
   async function handleSubmit() {
     setFormError(null);
 
-    const parsed = registerSchema.safeParse({
-      email: email.trim(),
-      password,
-      confirmPassword,
-    });
+    const parsed = registerSchema.safeParse({ email: email.trim(), password, confirmPassword });
     if (!parsed.success) {
       setFieldErrors(toFieldErrors<Field>(parsed.error));
       return;
@@ -43,14 +39,8 @@ export default function RegisterScreen() {
       return;
     }
 
-    if (result.data.needsEmailConfirmation) {
-      // Account created, but no session issued. Nothing will redirect us,
-      // so the screen has to say what happens next.
-      setAwaitingConfirmation(true);
-      return;
-    }
-
-    // Otherwise a session exists and the (auth) gate redirects us out.
+    // No session issued, so nothing will redirect us away from this screen.
+    if (result.data.needsEmailConfirmation) setAwaitingConfirmation(true);
   }
 
   if (awaitingConfirmation) {
@@ -90,7 +80,6 @@ export default function RegisterScreen() {
           placeholder="At least 8 characters"
           secureTextEntry
           autoCapitalize="none"
-          // Tells the OS password manager to offer a generated password.
           autoComplete="new-password"
           textContentType="newPassword"
         />

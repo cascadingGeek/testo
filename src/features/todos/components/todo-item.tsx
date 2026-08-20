@@ -2,9 +2,9 @@ import { Link } from 'expo-router';
 import { memo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { formatDueDate, isOverdue } from '@/lib/dates';
-import type { TodoWithCategory } from '@/features/todos/todos-api';
+import type { TodoWithCategory } from '@/api/todos';
 import type { TodoPriority } from '@/types/todo';
+import { formatDueDate, isOverdue } from '@/utils/dates';
 
 const PRIORITY_DOT: Record<TodoPriority, string> = {
   low: 'bg-muted-foreground',
@@ -23,9 +23,6 @@ function TodoItemComponent({ todo, onToggle, onDelete }: TodoItemProps) {
     <View className="flex-row items-center gap-3 rounded-lg bg-card p-4">
       <Pressable
         onPress={() => onToggle(todo)}
-        // 44x44 is Apple's minimum touch target; a 20px checkbox alone is a
-        // target people miss. hitSlop grows the tappable area without
-        // changing anything visually.
         hitSlop={12}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: todo.completed }}
@@ -40,11 +37,10 @@ function TodoItemComponent({ todo, onToggle, onDelete }: TodoItemProps) {
       </Pressable>
 
       <Link href={`/todos/${todo.id}`} asChild>
-        {/* The priority dot is colour-only, which conveys nothing to a screen
-            reader. Stating it in the label keeps the information available. */}
         <Pressable
           className="flex-1"
           accessibilityRole="button"
+          // Priority and due date are colour-coded; say them out loud too.
           accessibilityLabel={[
             todo.title,
             `${todo.priority} priority`,
@@ -75,11 +71,9 @@ function TodoItemComponent({ todo, onToggle, onDelete }: TodoItemProps) {
             <View className="ml-4 mt-1 flex-row items-center gap-3">
               {todo.categories ? (
                 <View className="flex-row items-center gap-1.5">
+                  {/* Runtime colour, so style rather than a compiled class. */}
                   <View
                     className="h-2 w-2 rounded-full"
-                    // The colour is user data from the database, so it cannot
-                    // be a Tailwind class name — those are resolved at build
-                    // time. Arbitrary runtime colours must go through `style`.
                     style={{ backgroundColor: todo.categories.color }}
                   />
                   <Text className="text-xs text-muted-foreground">{todo.categories.name}</Text>
@@ -114,9 +108,5 @@ function TodoItemComponent({ todo, onToggle, onDelete }: TodoItemProps) {
   );
 }
 
-/**
- * memo matters more here than in most places: FlatList re-renders rows on
- * every parent update, and a list is the one place where wasted renders are
- * felt as dropped frames while scrolling.
- */
+/** Rows re-render on every parent update; memo keeps scrolling smooth. */
 export const TodoItem = memo(TodoItemComponent);

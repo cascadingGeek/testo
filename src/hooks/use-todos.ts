@@ -1,30 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 
-import { useAuth } from '@/features/auth/auth-context';
-import { todoKeys } from '@/features/todos/todo-keys';
 import {
   createTodo,
   deleteTodo,
   fetchTodos,
-  setTodoCompleted,
+  updateTodo,
   type TodoWithCategory,
-} from '@/features/todos/todos-api';
-import { toMessage, unwrap } from '@/lib/query';
-import { err, ok, type Result } from '@/lib/result';
+} from '@/api/todos';
+import { toMessage, unwrap } from '@/lib/query-client';
+import { todoKeys } from '@/lib/query-keys';
+import { useAuthStore } from '@/store/auth-store';
+import { err, ok, type Result } from '@/utils/result';
 
-/**
- * Server state for the todo list, backed by one shared cache.
- *
- * The surface of this hook is unchanged from the hand-rolled version — the
- * screens using it did not need a single edit. That is what putting data
- * access behind a hook bought us: the entire data layer was replaced
- * underneath them.
- */
 export function useTodos() {
   const queryClient = useQueryClient();
-  const { session } = useAuth();
-  const userId = session?.user.id;
+  const userId = useAuthStore((state) => state.session?.user.id);
 
   const query = useQuery({
     queryKey: todoKeys.list(),
@@ -33,24 +24,17 @@ export function useTodos() {
 
   const todos = query.data ?? [];
 
-  /**
-   * Writes the row the server returned straight into the cache instead of
-   * refetching the whole list. This is the request you spotted as avoidable:
-   * the mutation response already contains the fresh row.
-   */
+  /** Mutations return the fresh row, so there is nothing to refetch. */
   const writeToCache = useCallback(
     (todo: TodoWithCategory, mode: 'upsert' | 'remove') => {
       queryClient.setQueryData<TodoWithCategory[]>(todoKeys.list(), (current = []) => {
         if (mode === 'remove') return current.filter((item) => item.id !== todo.id);
 
-        const exists = current.some((item) => item.id === todo.id);
-        return exists
+        return current.some((item) => item.id === todo.id)
           ? current.map((item) => (item.id === todo.id ? todo : item))
           : [todo, ...current];
       });
 
-      // Keep the detail cache honest too, so opening this todo shows the
-      // change immediately rather than the version it was last fetched with.
       if (mode === 'remove') queryClient.removeQueries({ queryKey: todoKeys.detail(todo.id) });
       else queryClient.setQueryData(todoKeys.detail(todo.id), todo);
     },
@@ -66,7 +50,8 @@ export function useTodos() {
   });
 
   const toggleMutation = useMutation({
-    mutationFn: (todo: TodoWithCategory) => unwrap(setTodoCompleted(todo.id, !todo.completed)),
+    mutationFn: (todo: TodoWithCategory) =>
+      unwrap(updateTodo(todo.id, { completed: !todo.completed })),
     onSuccess: (todo) => writeToCache(todo, 'upsert'),
   });
 

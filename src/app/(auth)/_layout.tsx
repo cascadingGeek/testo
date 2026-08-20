@@ -1,14 +1,13 @@
 import { Redirect, Stack } from 'expo-router';
 
 import { FullScreenLoader } from '@/components/full-screen-loader';
-import { useAuth } from '@/features/auth/auth-context';
+import { useAuthStore } from '@/store/auth-store';
 
 export default function AuthLayout() {
-  const { session, isLoading } = useAuth();
+  const session = useAuthStore((state) => state.session);
+  const isLoading = useAuthStore((state) => state.isLoading);
 
   if (isLoading) return <FullScreenLoader />;
-
-  // Already signed in? The login screen is not useful. Send them to the app.
   if (session) return <Redirect href="/" />;
 
   return <Stack screenOptions={{ headerShown: false }} />;

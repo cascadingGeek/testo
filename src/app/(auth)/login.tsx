@@ -2,12 +2,12 @@ import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { signInWithEmail } from '@/api/auth';
 import { AuthScreenLayout } from '@/components/auth-screen-layout';
 import { FormField } from '@/components/form-field';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
-import { signInWithEmail } from '@/features/auth/auth-api';
-import { loginSchema } from '@/features/auth/auth-schemas';
-import { toFieldErrors } from '@/lib/form-errors';
+import { loginSchema } from '@/schemas/auth';
+import { toFieldErrors } from '@/utils/form-errors';
 
 type Field = 'email' | 'password';
 
@@ -21,7 +21,6 @@ export default function LoginScreen() {
   async function handleSubmit() {
     setFormError(null);
 
-    // Client-side check first: instant feedback, no wasted network round trip.
     const parsed = loginSchema.safeParse({ email: email.trim(), password });
     if (!parsed.success) {
       setFieldErrors(toFieldErrors<Field>(parsed.error));
@@ -33,14 +32,8 @@ export default function LoginScreen() {
     const result = await signInWithEmail(parsed.data);
     setIsSubmitting(false);
 
-    if (!result.ok) {
-      setFormError(result.message);
-      return;
-    }
-
-    // Deliberately no navigation call here. supabase-js fires onAuthStateChange,
-    // AuthProvider updates the session, and the (auth) layout redirects. One
-    // source of truth for "where should this user be" instead of two.
+    if (!result.ok) setFormError(result.message);
+    // On success the auth store updates and the (auth) gate redirects.
   }
 
   return (

@@ -2,21 +2,14 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Input, InputField } from '@/components/ui/input';
-import { useCategories } from '@/features/categories/use-categories';
-import type { Category } from '@/types/todo';
+import { useCategories } from '@/hooks/use-categories';
 
 type CategoryPickerProps = {
   value: string | null;
   onChange: (categoryId: string | null) => void;
 };
 
-/**
- * Categories are picked and created in the same place.
- *
- * A separate "manage categories" screen would mean abandoning the todo you
- * are editing to go and create one. Inline creation keeps the user where
- * they are, which matters more on a phone than on a desktop.
- */
+/** Creation is inline so picking one never means leaving the todo you're editing. */
 export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
   const { categories, isLoading, addCategory } = useCategories();
 
@@ -34,8 +27,6 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
       return;
     }
 
-    // Select the category we just made: creating one and then having to tap
-    // it is a step nobody wants.
     onChange(result.data.id);
     setError(null);
     setName('');
@@ -76,12 +67,8 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
         <Text className="text-sm text-muted-foreground">Loading categories…</Text>
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
-          <CategoryChip
-            label="None"
-            isSelected={value === null}
-            onPress={() => onChange(null)}
-          />
-          {categories.map((category: Category) => (
+          <CategoryChip label="None" isSelected={value === null} onPress={() => onChange(null)} />
+          {categories.map((category) => (
             <CategoryChip
               key={category.id}
               label={category.name}
@@ -113,9 +100,7 @@ function CategoryChip({ label, color, isSelected, onPress }: CategoryChipProps) 
         isSelected ? 'border-primary bg-primary' : 'border-border bg-card'
       }`}
     >
-      {color ? (
-        <View className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
-      ) : null}
+      {color ? <View className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} /> : null}
       <Text
         className={`text-sm font-medium ${
           isSelected ? 'text-primary-foreground' : 'text-foreground'

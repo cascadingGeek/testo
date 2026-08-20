@@ -9,7 +9,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "gen:types": "npx supabase gen types typescript --project-id nhxvegvatfrxlmphjpek --schema public > src/types/database.ts.tmp && mv src/types/database.ts.tmp src/types/database.ts"
+    "gen:types": "npx supabase gen types typescript --project-id nhxvegvatfrxlmphjpek --schema public > src/types/database.ts.tmp && mv src/types/database.ts.tmp src/types/database.ts",
+    "analyze": "EXPO_ATLAS=true npx expo export --platform ios --output-dir /tmp/expo-analyze >/dev/null && npx expo-atlas .expo/atlas.jsonl"
   },
   "dependencies": {
     "@gluestack-ui/core": "^5.0.15",
@@ -49,6 +50,7 @@
   "devDependencies": {
     "@types/react": "~19.2.2",
     "babel-preset-expo": "~55.0.8",
+    "expo-atlas": "^0.4.3",
     "tailwindcss": "^4.3.3",
     "typescript": "~5.9.2"
   },

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { TodoFilter } from '@/features/todos/todo-filters';
+import type { TodoFilter } from '@/utils/todo-filters';
 
 export const TODO_SORTS = ['smart', 'due_date', 'priority', 'title'] as const;
 
@@ -22,14 +22,7 @@ type TodoViewState = {
   setSort: (sort: TodoSort) => void;
 };
 
-/**
- * How the todo list is currently being *viewed* — not the todos themselves.
- *
- * This is deliberately NOT in TanStack Query: none of it comes from a server.
- * And it is deliberately not useState in the todos screen either, because the
- * dashboard writes it — tapping "Overdue" there sets the filter and navigates.
- * Cross-screen UI state with two writers is exactly what a small store is for.
- */
+/** How the list is viewed. The dashboard writes it, the todos screen reads it. */
 export const useTodoViewStore = create<TodoViewState>((set) => ({
   filter: 'all',
   query: '',

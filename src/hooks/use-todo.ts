@@ -1,16 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 
-import { todoKeys } from '@/features/todos/todo-keys';
-import type { TodoEditInput } from '@/features/todos/todo-schemas';
-import {
-  deleteTodo,
-  fetchTodo,
-  updateTodo,
-  type TodoWithCategory,
-} from '@/features/todos/todos-api';
-import { toMessage, unwrap } from '@/lib/query';
-import { err, ok, type Result } from '@/lib/result';
+import { deleteTodo, fetchTodo, updateTodo, type TodoWithCategory } from '@/api/todos';
+import { toMessage, unwrap } from '@/lib/query-client';
+import { todoKeys } from '@/lib/query-keys';
+import type { TodoEditInput } from '@/schemas/todo';
+import { err, ok, type Result } from '@/utils/result';
 
 export function useTodo(id: string) {
   const queryClient = useQueryClient();
@@ -19,15 +14,8 @@ export function useTodo(id: string) {
     queryKey: todoKeys.detail(id),
     queryFn: () => unwrap(fetchTodo(id)),
 
-    /**
-     * The list already fetched this row. Seeding from it means the detail
-     * screen renders instantly with no spinner, and the request only happens
-     * if that cached copy is stale.
-     *
-     * initialDataUpdatedAt is what makes that work: without it the seeded
-     * data would be treated as fresh right now, and a genuinely old row
-     * would never be revalidated.
-     */
+    // Seed from the list so the screen opens instantly. Without the timestamp
+    // the seeded row would count as fresh and never revalidate.
     initialData: () =>
       queryClient
         .getQueryData<TodoWithCategory[]>(todoKeys.list())
@@ -50,7 +38,6 @@ export function useTodo(id: string) {
       unwrap(
         updateTodo(id, {
           title: input.title,
-          // Empty string is not the same as "no description".
           description: input.description.length > 0 ? input.description : null,
           priority: input.priority,
           due_date: input.due_date,

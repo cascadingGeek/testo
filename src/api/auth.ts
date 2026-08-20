@@ -1,21 +1,14 @@
 import { AuthError } from '@supabase/supabase-js';
 
-import type { LoginInput, RegisterInput } from '@/features/auth/auth-schemas';
-import { err, ok, type Result } from '@/lib/result';
 import { supabase } from '@/lib/supabase';
+import type { LoginInput, RegisterInput } from '@/schemas/auth';
+import { err, ok, type Result } from '@/utils/result';
 
-const FALLBACK_MESSAGE = 'Something went wrong. Please try again.';
-
-/**
- * Supabase error *codes* are stable; error.message is written for developers
- * and can change between releases. Translating in one place means no screen
- * ever renders a raw API string at a user.
- */
+/** Codes are stable; error.message is written for developers and changes. */
 function toMessage(error: AuthError): string {
   switch (error.code) {
     case 'invalid_credentials':
-      // Intentionally vague. "No account with that email" would let anyone
-      // test addresses to discover who has an account here.
+      // Vague on purpose: a specific message turns login into an account oracle.
       return 'Email or password is incorrect.';
     case 'email_not_confirmed':
       return 'Confirm your email address before signing in.';
@@ -36,10 +29,8 @@ function toMessage(error: AuthError): string {
     case 'validation_failed':
       return 'Check the details you entered and try again.';
     default:
-      // A code we have not handled. The user gets something safe; the
-      // developer gets the real thing in the console.
       if (__DEV__) console.warn('[auth] unmapped error', error.code, error.message);
-      return FALLBACK_MESSAGE;
+      return 'Something went wrong. Please try again.';
   }
 }
 
@@ -53,9 +44,7 @@ export async function registerWithEmail(
 
   if (error) return err(toMessage(error));
 
-  // When the project requires email confirmation, sign-up succeeds but no
-  // session is issued — the user is created, not signed in. That is the only
-  // reliable way to tell the two configurations apart.
+  // Sign-up succeeds without a session when the project requires confirmation.
   return ok({ needsEmailConfirmation: data.session === null });
 }
 

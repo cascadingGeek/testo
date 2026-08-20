@@ -2,43 +2,37 @@ import { Link, router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from 'react-native';
 
+import type { TodoWithCategory } from '@/api/todos';
 import { Button, ButtonText } from '@/components/ui/button';
-import { useAuth } from '@/features/auth/auth-context';
 import { StatTile } from '@/features/dashboard/components/stat-tile';
 import { TodoItem } from '@/features/todos/components/todo-item';
-import { countByFilter, selectTodos } from '@/features/todos/todo-filters';
-import { useTodoViewStore, type TodoSort } from '@/features/todos/todo-view-store';
-import { useTodos } from '@/features/todos/use-todos';
-import { todayString } from '@/lib/dates';
-import type { TodoWithCategory } from '@/features/todos/todos-api';
+import { useTodos } from '@/hooks/use-todos';
+import { useAuthStore } from '@/store/auth-store';
+import { useTodoViewStore } from '@/store/todo-view-store';
+import { todayString } from '@/utils/dates';
+import { countByFilter, selectTodos, type TodoFilter } from '@/utils/todo-filters';
 
 export default function DashboardScreen() {
-  const { session } = useAuth();
+  const email = useAuthStore((state) => state.session?.user.email);
+  const setFilter = useTodoViewStore((state) => state.setFilter);
   const { todos, isLoading, isRefreshing, error, refresh, toggleTodo, removeTodo } = useTodos();
+
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const today = todayString();
   const counts = useMemo(() => countByFilter(todos, today), [todos, today]);
   const todaysTodos = useMemo(() => selectTodos(todos, 'today', '', today), [todos, today]);
-
   const pending = todos.length - counts.completed;
 
-  const [actionError, setActionError] = useState<string | null>(null);
-
-  const setFilter = useTodoViewStore((state) => state.setFilter);
-
-  // The reason the view store exists: this screen writes the filter, the
-  // todos screen reads it. Two screens, one piece of UI state.
   const showFiltered = useCallback(
-    (next: Parameters<typeof setFilter>[0]) => {
+    (next: TodoFilter) => {
       setFilter(next);
       router.push('/todos');
     },
     [setFilter]
   );
 
-  // These return a Result. Passing them straight to TodoItem would compile —
-  // a promise is assignable where void is expected — and silently swallow
-  // every failure. Wrap them so errors reach the screen.
+  // These return a Result; passing them raw would compile and swallow errors.
   const handleToggle = useCallback(
     async (todo: TodoWithCategory) => {
       const result = await toggleTodo(todo);
@@ -71,7 +65,7 @@ export default function DashboardScreen() {
     >
       <View className="gap-1">
         <Text className="text-base text-muted-foreground">Signed in as</Text>
-        <Text className="text-lg font-medium text-foreground">{session?.user.email}</Text>
+        <Text className="text-lg font-medium text-foreground">{email}</Text>
       </View>
 
       {error || actionError ? (
@@ -80,8 +74,6 @@ export default function DashboardScreen() {
         </View>
       ) : null}
 
-      {/* The one number the screen leads with. Exactly one hero figure per
-          view, or nothing stands out and the hierarchy collapses. */}
       <View className="gap-1">
         <Text className="text-5xl font-semibold text-foreground">{counts.today}</Text>
         <Text className="text-base text-muted-foreground">
@@ -131,14 +123,11 @@ export default function DashboardScreen() {
             </Link>
           </View>
         ) : (
+          // A short, bounded list inside a ScrollView: a nested FlatList here
+          // would lose virtualisation anyway.
           <View className="gap-2">
             {todaysTodos.map((todo) => (
-              <TodoItem
-                key={todo.id}
-                todo={todo}
-                onToggle={handleToggle}
-                onDelete={handleDelete}
-              />
+              <TodoItem key={todo.id} todo={todo} onToggle={handleToggle} onDelete={handleDelete} />
             ))}
           </View>
         )}

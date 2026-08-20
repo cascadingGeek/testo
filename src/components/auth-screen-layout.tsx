@@ -6,16 +6,10 @@ type AuthScreenLayoutProps = PropsWithChildren<{
   subtitle: string;
 }>;
 
-/**
- * Shared chrome for the login and register screens: centred card, keyboard
- * handling, and a scroll container so short phones can still reach the
- * submit button once the keyboard is up.
- */
 export function AuthScreenLayout({ title, subtitle, children }: AuthScreenLayoutProps) {
   return (
     <KeyboardAvoidingView
-      // iOS slides the whole view; Android's window already resizes, and
-      // applying 'padding' there double-counts the keyboard.
+      // Android's window already resizes; adding padding double-counts it.
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       className="flex-1 bg-background"
     >

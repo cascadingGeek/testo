@@ -1,7 +1,11 @@
-/** Keys match by prefix, so invalidating `all` covers every list and detail. */
+import type { TodoListParams } from '@/api/todos';
+
+/** Keys match by prefix, so invalidating `all` covers lists, counts and details. */
 export const todoKeys = {
   all: ['todos'] as const,
-  list: () => [...todoKeys.all, 'list'] as const,
+  lists: () => [...todoKeys.all, 'list'] as const,
+  list: (params: TodoListParams) => [...todoKeys.lists(), params] as const,
+  counts: () => [...todoKeys.all, 'counts'] as const,
   detail: (id: string) => [...todoKeys.all, 'detail', id] as const,
 };
 

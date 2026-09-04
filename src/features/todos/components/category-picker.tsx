@@ -14,14 +14,23 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
   const { categories, isLoading, addCategory } = useCategories();
 
   const [isCreating, setIsCreating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * The unique (user_id, name) constraint already makes a double submit safe,
+   * but the second insert comes back as "you already have a category with that
+   * name" — an error for a category that was in fact just created.
+   */
   async function handleCreate() {
     const trimmed = name.trim();
-    if (trimmed.length === 0) return;
+    if (trimmed.length === 0 || isSaving) return;
 
+    setIsSaving(true);
     const result = await addCategory(trimmed);
+    setIsSaving(false);
+
     if (!result.ok) {
       setError(result.message);
       return;
@@ -38,7 +47,12 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
       <View className="flex-row items-center justify-between">
         <Text className="text-sm font-medium text-foreground">Category</Text>
         <Pressable
-          onPress={() => setIsCreating((current) => !current)}
+          onPress={() => {
+            // Otherwise a failed attempt's message stays attached to the next.
+            setIsCreating((current) => !current);
+            setError(null);
+            setName('');
+          }}
           hitSlop={12}
           accessibilityRole="button"
         >
@@ -57,6 +71,7 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
               autoFocus
               onSubmitEditing={handleCreate}
               returnKeyType="done"
+              editable={!isSaving}
             />
           </Input>
           {error ? <Text className="text-sm text-destructive">{error}</Text> : null}

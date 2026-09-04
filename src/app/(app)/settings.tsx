@@ -1,8 +1,12 @@
+import { LogOut, Tag, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { signOut } from '@/api/auth';
+import { EmptyState } from '@/components/empty-state';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
+import { themeColors } from '@/core/theme-colors';
+import { NotificationSettings } from '@/features/notifications/components/notification-settings';
 import { useCategories } from '@/hooks/use-categories';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -56,18 +60,25 @@ export default function SettingsScreen() {
         </View>
       ) : null}
 
+      <NotificationSettings />
+
       <View className="gap-3">
         <Text className="text-lg font-semibold text-foreground">Categories</Text>
 
         {isLoading ? (
           <ActivityIndicator />
         ) : categories.length === 0 ? (
-          <Text className="text-sm text-muted-foreground">
-            No categories yet. Create one while editing a todo.
-          </Text>
+          <EmptyState
+            icon={<Tag size={28} color={themeColors.mutedForeground} />}
+            title="No categories yet"
+            message="Create one while editing a todo."
+          />
         ) : (
           categories.map((category) => (
-            <View key={category.id} className="flex-row items-center gap-3 rounded-lg bg-card p-4">
+            <View
+              key={category.id}
+              className="flex-row items-center gap-3 rounded-xl border border-border/60 bg-card p-4"
+            >
               <View
                 className="h-3 w-3 rounded-full"
                 style={{ backgroundColor: category.color }}
@@ -79,7 +90,7 @@ export default function SettingsScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={`Delete category ${category.name}`}
               >
-                <Text className="text-sm text-destructive">Delete</Text>
+                <Trash2 size={18} color={themeColors.destructive} />
               </Pressable>
             </View>
           ))
@@ -87,7 +98,7 @@ export default function SettingsScreen() {
       </View>
 
       <Button variant="destructive" onPress={handleSignOut} isDisabled={isSigningOut}>
-        {isSigningOut ? <ButtonSpinner /> : null}
+        {isSigningOut ? <ButtonSpinner /> : <LogOut size={18} color="#FFFFFF" />}
         <ButtonText>{isSigningOut ? 'Signing out…' : 'Sign out'}</ButtonText>
       </Button>
     </ScrollView>

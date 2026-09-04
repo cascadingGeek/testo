@@ -45,6 +45,7 @@ export type Database = {
           created_at: string
           description: string | null
           due_date: string | null
+          due_time: string | null
           id: string
           priority: Database["public"]["Enums"]["todo_priority"]
           title: string
@@ -57,6 +58,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date?: string | null
+          due_time?: string | null
           id?: string
           priority?: Database["public"]["Enums"]["todo_priority"]
           title: string
@@ -69,6 +71,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date?: string | null
+          due_time?: string | null
           id?: string
           priority?: Database["public"]["Enums"]["todo_priority"]
           title?: string

@@ -1,8 +1,8 @@
-import type { ZodError } from 'zod';
+import type { core } from 'zod/mini';
 
 /** First message per field — three complaints about one input is noise. */
 export function toFieldErrors<TField extends string>(
-  error: ZodError
+  error: core.$ZodError
 ): Partial<Record<TField, string>> {
   const fieldErrors: Partial<Record<TField, string>> = {};
 

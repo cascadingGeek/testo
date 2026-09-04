@@ -1,5 +1,7 @@
+import { Image } from 'expo-image';
 import type { PropsWithChildren } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 type AuthScreenLayoutProps = PropsWithChildren<{
   title: string;
@@ -17,13 +19,25 @@ export function AuthScreenLayout({ title, subtitle, children }: AuthScreenLayout
         contentContainerClassName="flex-grow justify-center p-6"
         keyboardShouldPersistTaps="handled"
       >
-        <View className="gap-6">
-          <View className="gap-2">
-            <Text className="text-3xl font-bold text-foreground">{title}</Text>
-            <Text className="text-base text-muted-foreground">{subtitle}</Text>
+        <Animated.View entering={FadeInDown.duration(320)} className="gap-6">
+          <View className="gap-3">
+            <Image
+              source={require('@/assets/images/icon.png')}
+              style={{ width: 56, height: 56, borderRadius: 14 }}
+              // expo-image decodes off the JS thread and fades in instead of
+              // popping — the difference is visible on a cold start.
+              contentFit="cover"
+              transition={250}
+              cachePolicy="memory-disk"
+              accessibilityIgnoresInvertColors
+            />
+            <View className="gap-2">
+              <Text className="text-3xl font-bold text-foreground">{title}</Text>
+              <Text className="text-base text-muted-foreground">{subtitle}</Text>
+            </View>
           </View>
           {children}
-        </View>
+        </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
   );

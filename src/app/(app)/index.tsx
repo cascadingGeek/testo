@@ -1,28 +1,41 @@
 import { Link, router } from 'expo-router';
+import { CalendarCheck2, ListTodo } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import type { TodoWithCategory } from '@/api/todos';
+import { EmptyState } from '@/components/empty-state';
+import { FullScreenLoader } from '@/components/full-screen-loader';
 import { Button, ButtonText } from '@/components/ui/button';
+import { themeColors } from '@/core/theme-colors';
 import { StatTile } from '@/features/dashboard/components/stat-tile';
 import { TodoItem } from '@/features/todos/components/todo-item';
+import { useTodoCounts } from '@/hooks/use-todo-counts';
+import { useTodoMutations } from '@/hooks/use-todo-mutations';
+import { useToday } from '@/hooks/use-today';
 import { useTodos } from '@/hooks/use-todos';
 import { useAuthStore } from '@/store/auth-store';
 import { useTodoViewStore } from '@/store/todo-view-store';
-import { todayString } from '@/utils/dates';
-import { countByFilter, selectTodos, type TodoFilter } from '@/utils/todo-filters';
+import type { TodoFilter } from '@/utils/todo-filters';
 
 export default function DashboardScreen() {
   const email = useAuthStore((state) => state.session?.user.email);
   const setFilter = useTodoViewStore((state) => state.setFilter);
-  const { todos, isLoading, isRefreshing, error, refresh, toggleTodo, removeTodo } = useTodos();
+
+  const today = useToday();
+  const params = useMemo(
+    () => ({ filter: 'today' as const, search: '', sort: 'smart' as const, today }),
+    [today]
+  );
+
+  // Only today's page is fetched here; the tiles come from count queries that
+  // return no rows at all.
+  const { todos, isLoading, isRefreshing, error, refresh } = useTodos(params);
+  const { counts } = useTodoCounts({ search: '', today });
+  const { toggleTodo, removeTodo } = useTodoMutations();
 
   const [actionError, setActionError] = useState<string | null>(null);
-
-  const today = todayString();
-  const counts = useMemo(() => countByFilter(todos, today), [todos, today]);
-  const todaysTodos = useMemo(() => selectTodos(todos, 'today', '', today), [todos, today]);
-  const pending = todos.length - counts.completed;
 
   const showFiltered = useCallback(
     (next: TodoFilter) => {
@@ -32,30 +45,24 @@ export default function DashboardScreen() {
     [setFilter]
   );
 
-  // These return a Result; passing them raw would compile and swallow errors.
   const handleToggle = useCallback(
     async (todo: TodoWithCategory) => {
       const result = await toggleTodo(todo);
-      if (!result.ok) setActionError(result.message);
+      setActionError(result.ok ? null : result.message);
     },
     [toggleTodo]
   );
 
   const handleDelete = useCallback(
-    async (id: string) => {
-      const result = await removeTodo(id);
-      if (!result.ok) setActionError(result.message);
+    async (todo: TodoWithCategory) => {
+      const result = await removeTodo(todo);
+      setActionError(result.ok ? null : result.message);
     },
     [removeTodo]
   );
 
-  if (isLoading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator />
-      </View>
-    );
-  }
+  // Offers a way out rather than spinning forever if the request hangs.
+  if (isLoading) return <FullScreenLoader onRetry={refresh} />;
 
   return (
     <ScrollView
@@ -68,33 +75,43 @@ export default function DashboardScreen() {
         <Text className="text-lg font-medium text-foreground">{email}</Text>
       </View>
 
-      {error || actionError ? (
+      {/* The action error wins: it is the newer of the two, and a stale list
+          error would otherwise mask every failure underneath it. */}
+      {actionError ?? error ? (
         <View className="rounded-md bg-destructive/10 p-3">
-          <Text className="text-sm text-destructive">{error ?? actionError}</Text>
+          <Text className="text-sm text-destructive">{actionError ?? error}</Text>
         </View>
       ) : null}
 
-      <View className="gap-1">
+      {/* Staggered entrances: the hero figure lands first, the tiles follow,
+          so the eye is led to the number that matters. */}
+      <Animated.View entering={FadeInDown.duration(300)} className="gap-1">
         <Text className="text-5xl font-semibold text-foreground">{counts.today}</Text>
         <Text className="text-base text-muted-foreground">
           {counts.today === 1 ? 'todo due today' : 'todos due today'}
         </Text>
-      </View>
+      </Animated.View>
 
-      <View className="flex-row gap-3">
+      <Animated.View entering={FadeInDown.delay(80).duration(300)} className="flex-row gap-3">
         <StatTile
           label="Overdue"
           value={counts.overdue}
           tone="critical"
           onPress={() => showFiltered('overdue')}
         />
-        <StatTile label="Pending" value={pending} onPress={() => showFiltered('all')} />
+        {/* The number and the destination are now the same query — the tile
+            used to read "Pending" and navigate to a list including done ones. */}
+        <StatTile
+          label="Pending"
+          value={counts.pending}
+          onPress={() => showFiltered('pending')}
+        />
         <StatTile
           label="Completed"
           value={counts.completed}
           onPress={() => showFiltered('completed')}
         />
-      </View>
+      </Animated.View>
 
       <View className="gap-3">
         <View className="flex-row items-center justify-between">
@@ -104,29 +121,36 @@ export default function DashboardScreen() {
           </Link>
         </View>
 
-        {todaysTodos.length === 0 ? (
-          <View className="items-center gap-3 rounded-lg bg-card py-10">
-            <Text className="text-base font-medium text-foreground">
-              {todos.length === 0 ? 'No todos yet' : 'Nothing due today'}
-            </Text>
-            <Text className="px-6 text-center text-sm text-muted-foreground">
-              {todos.length === 0
-                ? 'Add your first todo to get started.'
-                : counts.overdue > 0
-                  ? 'You have overdue todos waiting, though.'
-                  : 'Enjoy the clear day.'}
-            </Text>
-            <Link href="/todos" asChild>
-              <Button variant="outline">
-                <ButtonText>{todos.length === 0 ? 'Add a todo' : 'View all todos'}</ButtonText>
-              </Button>
-            </Link>
+        {todos.length === 0 ? (
+          <View className="rounded-xl border border-border/60 bg-card">
+            <EmptyState
+              icon={
+                counts.all === 0 ? (
+                  <ListTodo size={32} color={themeColors.mutedForeground} />
+                ) : (
+                  <CalendarCheck2 size={32} color={themeColors.primary} />
+                )
+              }
+              title={counts.all === 0 ? 'No todos yet' : 'Nothing due today'}
+              message={
+                counts.all === 0
+                  ? 'Add your first todo to get started.'
+                  : counts.overdue > 0
+                    ? 'You have overdue todos waiting, though.'
+                    : 'Enjoy the clear day.'
+              }
+              action={
+                <Link href="/todos" asChild>
+                  <Button variant="outline">
+                    <ButtonText>{counts.all === 0 ? 'Add a todo' : 'View all todos'}</ButtonText>
+                  </Button>
+                </Link>
+              }
+            />
           </View>
         ) : (
-          // A short, bounded list inside a ScrollView: a nested FlatList here
-          // would lose virtualisation anyway.
           <View className="gap-2">
-            {todaysTodos.map((todo) => (
+            {todos.map((todo) => (
               <TodoItem key={todo.id} todo={todo} onToggle={handleToggle} onDelete={handleDelete} />
             ))}
           </View>

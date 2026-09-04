@@ -2,13 +2,26 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 
 import { createCategory, deleteCategory, fetchCategories } from '@/api/categories';
-import { toMessage, unwrap } from '@/lib/query-client';
+import { toMessage, toResult, unwrap } from '@/lib/query-client';
 import { categoryKeys, todoKeys } from '@/lib/query-keys';
 import { useAuthStore } from '@/store/auth-store';
 import type { Category } from '@/types/todo';
-import { err, ok, type Result } from '@/utils/result';
+import type { Result } from '@/utils/result';
 
 const CATEGORY_COLORS = ['#64748B', '#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6'];
+
+/**
+ * Indexing by categories.length collides as soon as one is deleted — delete
+ * the third of four and the next one reuses a colour still in use. The dot is
+ * the only thing distinguishing chips, so prefer a colour nobody has.
+ */
+function nextColor(categories: Category[]): string {
+  const taken = new Set(categories.map((category) => category.color));
+  return (
+    CATEGORY_COLORS.find((color) => !taken.has(color)) ??
+    CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length]
+  );
+}
 
 export function useCategories() {
   const queryClient = useQueryClient();
@@ -25,7 +38,7 @@ export function useCategories() {
     mutationFn: (name: string) => {
       if (!userId) throw new Error('You are signed out.');
 
-      const color = CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length];
+      const color = nextColor(categories);
       return unwrap(createCategory({ name, color, userId }));
     },
     onSuccess: (category) => {
@@ -48,28 +61,19 @@ export function useCategories() {
     },
   });
 
+  // mutateAsync, not the mutation object: the object is rebuilt every render.
+  /* eslint-disable react-hooks/exhaustive-deps */
   const addCategory = useCallback(
-    async (name: string): Promise<Result<Category>> => {
-      try {
-        return ok(await createMutation.mutateAsync(name));
-      } catch (error) {
-        return err(toMessage(error));
-      }
-    },
-    [createMutation]
+    (name: string): Promise<Result<Category>> => toResult(createMutation.mutateAsync(name)),
+    [createMutation.mutateAsync]
   );
 
   const removeCategory = useCallback(
-    async (id: string): Promise<Result> => {
-      try {
-        await removeMutation.mutateAsync(id);
-        return ok();
-      } catch (error) {
-        return err(toMessage(error));
-      }
-    },
-    [removeMutation]
+    (id: string) => toResult(removeMutation.mutateAsync(id)),
+    [removeMutation.mutateAsync]
   );
+
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   return {
     categories,
